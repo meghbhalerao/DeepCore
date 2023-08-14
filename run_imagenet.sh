@@ -1,0 +1,1 @@
+CUDA_VISIBLE_DEVICES=0 python -u main.py --fraction 0.001 --dataset ImageNet --data_path /data/megh98/projects/dev_folder/tmp/smrai-container-documentation/src/data/imagenet --num_exp 5 --workers 10 --optimizer SGD -se 10 --selection Uniform --model ResNet18 --lr 0.1 -sp ./result --batch 256
