@@ -2,3 +2,4 @@ datasets/
 result/
 *out
 __pycache_/
+wandb/
