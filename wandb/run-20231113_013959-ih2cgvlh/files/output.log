@@ -1,0 +1,49 @@
+================== Exp 0 ==================
+dataset: CIFAR10, model: ResNet9, selection: Herding, num_ex: 5, epochs: 200, fraction: 0.1, seed: 97814, lr: 0.1, save_path: ./result, resume: , device: cuda, checkpoint_name: CIFAR10_ResNet9_Herding_exp0_epoch200_2023-11-13 01:40:12.867542_0.1_
+Files already downloaded and verified
+Files already downloaded and verified
+=> Training Epoch #0
+| Epoch [  0/ 10] Iter[  1/391]		Loss: 2.3705
+| Epoch [  0/ 10] Iter[ 21/391]		Loss: 2.5512
+| Epoch [  0/ 10] Iter[ 41/391]		Loss: 2.2774
+| Epoch [  0/ 10] Iter[ 61/391]		Loss: 2.1145
+| Epoch [  0/ 10] Iter[ 81/391]		Loss: 1.8867
+| Epoch [  0/ 10] Iter[101/391]		Loss: 2.0093
+| Epoch [  0/ 10] Iter[121/391]		Loss: 1.8666
+| Epoch [  0/ 10] Iter[141/391]		Loss: 1.7799
+| Epoch [  0/ 10] Iter[161/391]		Loss: 1.7150
+Exception in thread Thread-4 (_pin_memory_loop):
+Traceback (most recent call last):
+  File "/home/megh98/anaconda3/envs/smrsum/lib/python3.10/threading.py", line 1016, in _bootstrap_inner
+    self.run()
+  File "/home/megh98/anaconda3/envs/smrsum/lib/python3.10/threading.py", line 953, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/megh98/anaconda3/envs/smrsum/lib/python3.10/site-packages/torch/utils/data/_utils/pin_memory.py", line 51, in _pin_memory_loop
+    do_one_step()
+  File "/home/megh98/anaconda3/envs/smrsum/lib/python3.10/site-packages/torch/utils/data/_utils/pin_memory.py", line 28, in do_one_step
+    r = in_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
+  File "/home/megh98/anaconda3/envs/smrsum/lib/python3.10/multiprocessing/queues.py", line 122, in get
+    return _ForkingPickler.loads(res)
+  File "/home/megh98/anaconda3/envs/smrsum/lib/python3.10/site-packages/torch/multiprocessing/reductions.py", line 307, in rebuild_storage_fd
+    fd = df.detach()
+  File "/home/megh98/anaconda3/envs/smrsum/lib/python3.10/multiprocessing/resource_sharer.py", line 57, in detach
+    with _resource_sharer.get_connection(self._id) as conn:
+  File "/home/megh98/anaconda3/envs/smrsum/lib/python3.10/multiprocessing/resource_sharer.py", line 86, in get_connection
+    c = Client(address, authkey=process.current_process().authkey)
+  File "/home/megh98/anaconda3/envs/smrsum/lib/python3.10/multiprocessing/connection.py", line 502, in Client
+    c = SocketClient(address)
+  File "/home/megh98/anaconda3/envs/smrsum/lib/python3.10/multiprocessing/connection.py", line 630, in SocketClient
+    s.connect(address)
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "/data/megh98/projects/dev_folder/DeepCore/main.py", line 273, in <module>
+    main()
+  File "/data/megh98/projects/dev_folder/DeepCore/main.py", line 140, in main
+    subset = method.select()
+  File "/data/megh98/projects/dev_folder/DeepCore/deepcore/methods/herding.py", line 105, in select
+    selection_result = self.run()
+  File "/data/megh98/projects/dev_folder/DeepCore/deepcore/methods/earlytrain.py", line 134, in run
+    self.train(epoch, list_of_train_idx)
+  File "/data/megh98/projects/dev_folder/DeepCore/deepcore/methods/earlytrain.py", line 75, in train
+    inputs, targets = inputs.to(self.args.device), targets.to(self.args.device)
+KeyboardInterrupt
