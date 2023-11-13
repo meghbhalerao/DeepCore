@@ -66,13 +66,10 @@ class EarlyTrain(CoresetMethod):
 
         print('\n=> Training Epoch #%d' % epoch)
         trainset_permutation_inds = np.random.permutation(list_of_train_idx)
-        batch_sampler = torch.utils.data.BatchSampler(trainset_permutation_inds, batch_size=self.args.selection_batch,
-                                                      drop_last=False)
+        batch_sampler = torch.utils.data.BatchSampler(trainset_permutation_inds, batch_size=self.args.selection_batch, drop_last=False)
         trainset_permutation_inds = list(batch_sampler)
 
-        train_loader = torch.utils.data.DataLoader(self.dst_pretrain_dict['dst_train'] if self.if_dst_pretrain
-                                                   else self.dst_train, shuffle=False, batch_sampler=batch_sampler,
-                                                   num_workers=self.args.workers, pin_memory=True)
+        train_loader = torch.utils.data.DataLoader(self.dst_pretrain_dict['dst_train'] if self.if_dst_pretrain else self.dst_train, shuffle=False, batch_sampler=batch_sampler, num_workers=self.args.workers, pin_memory=True)
 
         for i, (inputs, targets) in enumerate(train_loader):
             inputs, targets = inputs.to(self.args.device), targets.to(self.args.device)
@@ -99,6 +96,7 @@ class EarlyTrain(CoresetMethod):
         self.train_indx = np.arange(self.n_train)
 
         # Setup model and loss
+        print(nets.__dict__)
         self.model = nets.__dict__[self.args.model if self.specific_model is None else self.specific_model](
             self.args.channel, self.dst_pretrain_dict["num_classes"] if self.if_dst_pretrain else self.num_classes,
             pretrained=self.torchvision_pretrain,

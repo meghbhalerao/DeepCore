@@ -2,6 +2,7 @@ import os
 import torch.nn as nn
 import argparse
 import deepcore.nets as nets
+from deepcore.nets import ResNet9
 import deepcore.datasets as datasets
 import deepcore.methods as methods
 from torchvision import transforms
@@ -63,20 +64,15 @@ def main():
                         help="number of epochs whiling performing selection on full dataset")
     parser.add_argument('--selection_momentum', '-sm', default=0.9, type=float, metavar='M',
                         help='momentum whiling performing selection (default: 0.9)')
-    parser.add_argument('--selection_weight_decay', '-swd', default=5e-4, type=float,
-                        metavar='W', help='weight decay whiling performing selection (default: 5e-4)',
+    parser.add_argument('--selection_weight_decay', '-swd', default=5e-4, type=float, metavar='W', help='weight decay whiling performing selection (default: 5e-4)',
                         dest='selection_weight_decay')
-    parser.add_argument('--selection_optimizer', "-so", default="SGD",
-                        help='optimizer to use whiling performing selection, e.g. SGD, Adam')
-    parser.add_argument("--selection_nesterov", "-sn", default=True, type=str_to_bool,
-                        help="if set nesterov whiling performing selection")
+    parser.add_argument('--selection_optimizer', "-so", default="SGD", help='optimizer to use whiling performing selection, e.g. SGD, Adam')
+    parser.add_argument("--selection_nesterov", "-sn", default=True, type=str_to_bool, help="if set nesterov whiling performing selection")
     parser.add_argument('--selection_lr', '-slr', type=float, default=0.1, help='learning rate for selection')
     parser.add_argument("--selection_test_interval", '-sti', default=1, type=int, help=
     "the number of training epochs to be preformed between two test epochs during selection (default: 1)")
-    parser.add_argument("--selection_test_fraction", '-stf', type=float, default=1.,
-             help="proportion of test dataset used for evaluating the model while preforming selection (default: 1.)")
-    parser.add_argument('--balance', default=True, type=str_to_bool,
-                        help="whether balance selection is performed per class")
+    parser.add_argument("--selection_test_fraction", '-stf', type=float, default=1., help="proportion of test dataset used for evaluating the model while preforming selection (default: 1.)")
+    parser.add_argument('--balance', default=True, type=str_to_bool, help="whether balance selection is performed per class")
 
     # Algorithm
     parser.add_argument('--submodular', default="GraphCut", help="specifiy submodular function to use")
@@ -128,13 +124,7 @@ def main():
 
     for exp in range(start_exp, args.num_exp):
         if args.save_path != "":
-            checkpoint_name = "{dst}_{net}_{mtd}_exp{exp}_epoch{epc}_{dat}_{fr}_".format(dst=args.dataset,
-                                                                                         net=args.model,
-                                                                                         mtd=args.selection,
-                                                                                         dat=datetime.now(),
-                                                                                         exp=start_exp,
-                                                                                         epc=args.epochs,
-                                                                                         fr=args.fraction)
+            checkpoint_name = "{dst}_{net}_{mtd}_exp{exp}_epoch{epc}_{dat}_{fr}_".format(dst=args.dataset, net=args.model, mtd=args.selection,dat=datetime.now(), exp=start_exp,epc=args.epochs, fr=args.fraction)
 
         print('\n================== Exp %d ==================\n' % exp)
         print("dataset: ", args.dataset, ", model: ", args.model, ", selection: ", args.selection, ", num_ex: ",
@@ -204,7 +194,7 @@ def main():
         for model in models:
             if len(models) > 1:
                 print("| Training on model %s" % model)
-
+            
             network = nets.__dict__[model](channel, num_classes, im_size).to(args.device)
 
             if args.device == "cpu":
@@ -276,17 +266,7 @@ def main():
                         best_prec1 = prec1
                         if args.save_path != "":
                             rec = record_ckpt(rec, epoch)
-                            save_checkpoint({"exp": exp,
-                                             "epoch": epoch + 1,
-                                             "state_dict": network.state_dict(),
-                                             "opt_dict": optimizer.state_dict(),
-                                             "best_acc1": best_prec1,
-                                             "rec": rec,
-                                             "subset": subset,
-                                             "sel_args": selection_args},
-                                            os.path.join(args.save_path, checkpoint_name + (
-                                                "" if model == args.model else model + "_") + "unknown.ckpt"),
-                                            epoch=epoch, prec=best_prec1)
+                            save_checkpoint({"exp": exp, "epoch": epoch + 1, "state_dict": network.state_dict(), "opt_dict": optimizer.state_dict(), "best_acc1": best_prec1, "rec": rec, "subset": subset, "sel_args": selection_args}, os.path.join(args.save_path, checkpoint_name + ("" if model == args.model else model + "_") + "unknown.ckpt"), epoch=epoch, prec=best_prec1)
 
             # Prepare for the next checkpoint
             if args.save_path != "":

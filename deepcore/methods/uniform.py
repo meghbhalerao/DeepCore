@@ -16,8 +16,7 @@ class Uniform(CoresetMethod):
         all_index = np.arange(self.n_train)
         for c in range(self.num_classes):
             c_index = (self.dst_train.targets == c)
-            self.index = np.append(self.index,
-                                   np.random.choice(all_index[c_index], round(self.fraction * c_index.sum().item()),
+            self.index = np.append(self.index, np.random.choice(all_index[c_index], round(self.fraction * c_index.sum().item()),
                                                     replace=self.replace))
         return self.index
 
