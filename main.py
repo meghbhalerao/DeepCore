@@ -83,7 +83,6 @@ def main():
     args = parser.parse_args()
     args.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-
     if args.train_batch is None:
         args.train_batch = args.batch
     if args.selection_batch is None:
@@ -229,10 +228,7 @@ def main():
 
             # Save the checkpont with only the susbet.
             if args.save_path != "" and args.resume == "":
-                save_checkpoint({"exp": exp,
-                                 "subset": subset,
-                                 "sel_args": selection_args},
-                                os.path.join(args.save_path, checkpoint_name + ("" if model == args.model else model + "_") + "unknown.ckpt"), 0, 0.)
+                save_checkpoint({"exp": exp, "subset": subset, "sel_args": selection_args}, os.path.join(args.save_path, checkpoint_name + ("" if model == args.model else model + "_") + "unknown.ckpt"), 0, 0.)
 
             for epoch in range(start_epoch, args.epochs):
                 # train for one epoch
@@ -250,7 +246,7 @@ def main():
                         if args.save_path != "":
                             rec = record_ckpt(rec, epoch)
                             save_checkpoint({"exp": exp, "epoch": epoch + 1, "state_dict": network.state_dict(), "opt_dict": optimizer.state_dict(), "best_acc1": best_prec1, "rec": rec, "subset": subset, "sel_args": selection_args}, os.path.join(args.save_path, checkpoint_name + ("" if model == args.model else model + "_") + "unknown.ckpt"), epoch=epoch, prec=best_prec1)
-                wandb.log({"acc_test": prec_test, "loss_test": loss_test, "acc_train": prec_train, "loss_train": loss_train})
+                wandb.log({"acc_test": prec_test, "loss_test": loss_test, "acc_train": prec_train, "loss_train": loss_train, "best_test_acc": best_prec1})
             # Prepare for the next checkpoint
             if args.save_path != "":
                 try:
@@ -273,6 +269,7 @@ def main():
             start_epoch = 0
             checkpoint = {}
             sleep(2)
+            
         wandb.finish()
     
 

@@ -113,9 +113,7 @@ class EarlyTrain(CoresetMethod):
 
         # Setup optimizer
         if self.args.selection_optimizer == "SGD":
-            self.model_optimizer = torch.optim.SGD(self.model.parameters(), lr=self.args.selection_lr,
-                                                   momentum=self.args.selection_momentum,
-                                                   weight_decay=self.args.selection_weight_decay,
+            self.model_optimizer = torch.optim.SGD(self.model.parameters(), lr=self.args.selection_lr, momentum=self.args.selection_momentum,weight_decay=self.args.selection_weight_decay,
                                                    nesterov=self.args.selection_nesterov)
         elif self.args.selection_optimizer == "Adam":
             self.model_optimizer = torch.optim.Adam(self.model.parameters(), lr=self.args.selection_lr,
