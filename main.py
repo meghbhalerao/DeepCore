@@ -9,6 +9,7 @@ from torchvision import transforms
 from utils import *
 from datetime import datetime
 from time import sleep
+import wandb
 
 
 def main():
@@ -26,19 +27,15 @@ def main():
     parser.add_argument('--print_freq', '-p', default=20, type=int, help='print frequency (default: 20)')
     parser.add_argument('--fraction', default=0.1, type=float, help='fraction of data to be selected (default: 0.1)')
     parser.add_argument('--seed', default=int(time.time() * 1000) % 100000, type=int, help="random seed")
-    parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
-                        help='number of data loading workers (default: 4)')
+    parser.add_argument('-j', '--workers', default=4, type=int, metavar='N', help='number of data loading workers (default: 4)')
     parser.add_argument("--cross", type=str, nargs="+", default=None, help="models for cross-architecture experiments")
 
     # Optimizer and scheduler
     parser.add_argument('--optimizer', default="SGD", help='optimizer to use, e.g. SGD, Adam')
     parser.add_argument('--lr', type=float, default=0.1, help='learning rate for updating network parameters')
     parser.add_argument('--min_lr', type=float, default=1e-4, help='minimum learning rate')
-    parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
-                        help='momentum (default: 0.9)')
-    parser.add_argument('-wd', '--weight_decay', default=5e-4, type=float,
-                        metavar='W', help='weight decay (default: 5e-4)',
-                        dest='weight_decay')
+    parser.add_argument('--momentum', default=0.9, type=float, metavar='M', help='momentum (default: 0.9)')
+    parser.add_argument('-wd', '--weight_decay', default=5e-4, type=float, metavar='W', help='weight decay (default: 5e-4)', dest='weight_decay')
     parser.add_argument("--nesterov", default=True, type=str_to_bool, help="if set nesterov")
     parser.add_argument("--scheduler", default="CosineAnnealingLR", type=str, help=
     "Learning rate scheduler")
@@ -86,6 +83,7 @@ def main():
     args = parser.parse_args()
     args.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
+
     if args.train_batch is None:
         args.train_batch = args.batch
     if args.selection_batch is None:
@@ -123,12 +121,13 @@ def main():
         start_epoch = 0
 
     for exp in range(start_exp, args.num_exp):
+        args.experiment_count = exp
+        wandb.init(config = vars(args))
         if args.save_path != "":
             checkpoint_name = "{dst}_{net}_{mtd}_exp{exp}_epoch{epc}_{dat}_{fr}_".format(dst=args.dataset, net=args.model, mtd=args.selection,dat=datetime.now(), exp=start_exp,epc=args.epochs, fr=args.fraction)
 
         print('\n================== Exp %d ==================\n' % exp)
-        print("dataset: ", args.dataset, ", model: ", args.model, ", selection: ", args.selection, ", num_ex: ",
-              args.num_exp, ", epochs: ", args.epochs, ", fraction: ", args.fraction, ", seed: ", args.seed,
+        print("dataset: ", args.dataset, ", model: ", args.model, ", selection: ", args.selection, ", num_ex: ", args.num_exp, ", epochs: ", args.epochs, ", fraction: ", args.fraction, ", seed: ", args.seed,
               ", lr: ", args.lr, ", save_path: ", args.save_path, ", resume: ", args.resume, ", device: ", args.device,
               ", checkpoint_name: " + checkpoint_name if args.save_path != "" else "", "\n", sep="")
 
@@ -142,12 +141,7 @@ def main():
             subset = checkpoint['subset']
             selection_args = checkpoint["sel_args"]
         else:
-            selection_args = dict(epochs=args.selection_epochs,
-                                  selection_method=args.uncertainty,
-                                  balance=args.balance,
-                                  greedy=args.submodular_greedy,
-                                  function=args.submodular
-                                  )
+            selection_args = dict(epochs=args.selection_epochs, selection_method=args.uncertainty, balance=args.balance, greedy=args.submodular_greedy, function=args.submodular)
             method = methods.__dict__[args.selection](dst_train, args, args.fraction, args.seed, **selection_args)
             subset = method.select()
         print(len(subset["indices"]))
@@ -158,12 +152,10 @@ def main():
                 [transforms.RandomCrop(args.im_size, padding=4, padding_mode="reflect"),
                  transforms.RandomHorizontalFlip(), dst_train.transform])
         elif args.dataset == "ImageNet":
-            dst_train.transform = transforms.Compose([
-                transforms.RandomResizedCrop(224),
+            dst_train.transform = transforms.Compose([transforms.RandomResizedCrop(224),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
-                transforms.Normalize(mean, std)
-            ])
+                transforms.Normalize(mean, std)])
 
         # Handle weighted subset
         if_weighted = "weights" in subset.keys()
@@ -174,15 +166,11 @@ def main():
 
         # BackgroundGenerator for ImageNet to speed up dataloaders
         if args.dataset == "ImageNet":
-            train_loader = DataLoaderX(dst_subset, batch_size=args.train_batch, shuffle=True,
-                                       num_workers=args.workers, pin_memory=True)
-            test_loader = DataLoaderX(dst_test, batch_size=args.train_batch, shuffle=False,
-                                      num_workers=args.workers, pin_memory=True)
+            train_loader = DataLoaderX(dst_subset, batch_size=args.train_batch, shuffle=True, num_workers=args.workers, pin_memory=True)
+            test_loader = DataLoaderX(dst_test, batch_size=args.train_batch, shuffle=False, num_workers=args.workers, pin_memory=True)
         else:
-            train_loader = torch.utils.data.DataLoader(dst_subset, batch_size=args.train_batch, shuffle=True,
-                                                       num_workers=args.workers, pin_memory=True)
-            test_loader = torch.utils.data.DataLoader(dst_test, batch_size=args.train_batch, shuffle=False,
-                                                      num_workers=args.workers, pin_memory=True)
+            train_loader = torch.utils.data.DataLoader(dst_subset, batch_size=args.train_batch, shuffle=True, num_workers=args.workers, pin_memory=True)
+            test_loader = torch.utils.data.DataLoader(dst_test, batch_size=args.train_batch, shuffle=False, num_workers=args.workers, pin_memory=True)
 
         # Listing cross-architecture experiment settings if specified.
         models = [args.model]
@@ -213,21 +201,17 @@ def main():
 
             # Optimizer
             if args.optimizer == "SGD":
-                optimizer = torch.optim.SGD(network.parameters(), args.lr, momentum=args.momentum,
-                                            weight_decay=args.weight_decay, nesterov=args.nesterov)
+                optimizer = torch.optim.SGD(network.parameters(), args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=args.nesterov)
             elif args.optimizer == "Adam":
                 optimizer = torch.optim.Adam(network.parameters(), args.lr, weight_decay=args.weight_decay)
             else:
-                optimizer = torch.optim.__dict__[args.optimizer](network.parameters(), args.lr, momentum=args.momentum,
-                                                                 weight_decay=args.weight_decay, nesterov=args.nesterov)
+                optimizer = torch.optim.__dict__[args.optimizer](network.parameters(), args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=args.nesterov)
 
             # LR scheduler
             if args.scheduler == "CosineAnnealingLR":
-                scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, len(train_loader) * args.epochs,
-                                                                       eta_min=args.min_lr)
+                scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, len(train_loader) * args.epochs, eta_min=args.min_lr)
             elif args.scheduler == "StepLR":
-                scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=len(train_loader) * args.step_size,
-                                                            gamma=args.gamma)
+                scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=len(train_loader) * args.step_size, gamma=args.gamma)
             else:
                 scheduler = torch.optim.lr_scheduler.__dict__[args.scheduler](optimizer)
             scheduler.last_epoch = (start_epoch - 1) * len(train_loader)
@@ -248,26 +232,25 @@ def main():
                 save_checkpoint({"exp": exp,
                                  "subset": subset,
                                  "sel_args": selection_args},
-                                os.path.join(args.save_path, checkpoint_name + ("" if model == args.model else model
-                                             + "_") + "unknown.ckpt"), 0, 0.)
+                                os.path.join(args.save_path, checkpoint_name + ("" if model == args.model else model + "_") + "unknown.ckpt"), 0, 0.)
 
             for epoch in range(start_epoch, args.epochs):
                 # train for one epoch
-                train(train_loader, network, criterion, optimizer, scheduler, epoch, args, rec, if_weighted=if_weighted)
+                prec_train, loss_train = train(train_loader, network, criterion, optimizer, scheduler, epoch, args, rec, if_weighted=if_weighted)
 
                 # evaluate on validation set
                 if args.test_interval > 0 and (epoch + 1) % args.test_interval == 0:
-                    prec1 = test(test_loader, network, criterion, epoch, args, rec)
+                    prec_test, loss_test = test(test_loader, network, criterion, epoch, args, rec)
 
                     # remember best prec@1 and save checkpoint
-                    is_best = prec1 > best_prec1
+                    is_best = prec_test > best_prec1
 
                     if is_best:
-                        best_prec1 = prec1
+                        best_prec1 = prec_test
                         if args.save_path != "":
                             rec = record_ckpt(rec, epoch)
                             save_checkpoint({"exp": exp, "epoch": epoch + 1, "state_dict": network.state_dict(), "opt_dict": optimizer.state_dict(), "best_acc1": best_prec1, "rec": rec, "subset": subset, "sel_args": selection_args}, os.path.join(args.save_path, checkpoint_name + ("" if model == args.model else model + "_") + "unknown.ckpt"), epoch=epoch, prec=best_prec1)
-
+                wandb.log({"acc_test": prec_test, "loss_test": loss_test, "acc_train": prec_train, "loss_train": loss_train})
             # Prepare for the next checkpoint
             if args.save_path != "":
                 try:
@@ -283,16 +266,15 @@ def main():
                                      "best_acc1": best_prec1,
                                      "rec": rec,
                                      "subset": subset,
-                                     "sel_args": selection_args},
-                                    os.path.join(args.save_path, checkpoint_name +
-                                                 ("" if model == args.model else model + "_") + "%f.ckpt" % best_prec1),
-                                    epoch=args.epochs - 1,
+                                     "sel_args": selection_args}, os.path.join(args.save_path, checkpoint_name + ("" if model == args.model else model + "_") + "%f.ckpt" % best_prec1), epoch=args.epochs - 1,
                                     prec=best_prec1)
 
             print('| Best accuracy: ', best_prec1, ", on model " + model if len(models) > 1 else "", end="\n\n")
             start_epoch = 0
             checkpoint = {}
             sleep(2)
+        wandb.finish()
+    
 
 
 if __name__ == '__main__':

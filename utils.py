@@ -67,6 +67,7 @@ def train(train_loader, network, criterion, optimizer, scheduler, epoch, args, r
                 loss=losses, top1=top1))
 
     record_train_stats(rec, epoch, losses.avg, top1.avg, optimizer.state_dict()['param_groups'][0]['lr'])
+    return top1.avg, losses.avg
 
 
 def test(test_loader, network, criterion, epoch, args, rec):
@@ -111,7 +112,7 @@ def test(test_loader, network, criterion, epoch, args, rec):
     network.no_grad = False
 
     record_test_stats(rec, epoch, losses.avg, top1.avg)
-    return top1.avg
+    return top1.avg, losses.avg
 
 
 class AverageMeter(object):

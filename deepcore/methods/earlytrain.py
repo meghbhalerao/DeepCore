@@ -73,7 +73,6 @@ class EarlyTrain(CoresetMethod):
 
         for i, (inputs, targets) in enumerate(train_loader):
             inputs, targets = inputs.to(self.args.device), targets.to(self.args.device)
-
             # Forward propagation, compute loss, get predictions
             self.model_optimizer.zero_grad()
             outputs = self.model(inputs)
@@ -96,7 +95,6 @@ class EarlyTrain(CoresetMethod):
         self.train_indx = np.arange(self.n_train)
 
         # Setup model and loss
-        print(nets.__dict__)
         self.model = nets.__dict__[self.args.model if self.specific_model is None else self.specific_model](
             self.args.channel, self.dst_pretrain_dict["num_classes"] if self.if_dst_pretrain else self.num_classes,
             pretrained=self.torchvision_pretrain,
