@@ -43,10 +43,8 @@ def main():
     parser.add_argument("--step_size", type=float, default=50, help="Step size for StepLR")
 
     # Training
-    parser.add_argument('--batch', '--batch-size', "-b", default=256, type=int, metavar='N',
-                        help='mini-batch size (default: 256)')
-    parser.add_argument("--train_batch", "-tb", default=None, type=int,
-                     help="batch size for training, if not specified, it will equal to batch size in argument --batch")
+    parser.add_argument('--batch', '--batch-size', "-b", default=256, type=int, metavar='N', help='mini-batch size (default: 256)')
+    parser.add_argument("--train_batch", "-tb", default=None, type=int, help="batch size for training, if not specified, it will equal to batch size in argument --batch")
     parser.add_argument("--selection_batch", "-sb", default=None, type=int,
                      help="batch size for selection, if not specified, it will equal to batch size in argument --batch")
 
@@ -57,12 +55,9 @@ def main():
                         help="proportion of test dataset used for evaluating the model (default: 1.)")
 
     # Selecting
-    parser.add_argument("--selection_epochs", "-se", default=40, type=int,
-                        help="number of epochs whiling performing selection on full dataset")
-    parser.add_argument('--selection_momentum', '-sm', default=0.9, type=float, metavar='M',
-                        help='momentum whiling performing selection (default: 0.9)')
-    parser.add_argument('--selection_weight_decay', '-swd', default=5e-4, type=float, metavar='W', help='weight decay whiling performing selection (default: 5e-4)',
-                        dest='selection_weight_decay')
+    parser.add_argument("--selection_epochs", "-se", default=40, type=int, help="number of epochs whiling performing selection on full dataset")
+    parser.add_argument('--selection_momentum', '-sm', default=0.9, type=float, metavar='M', help='momentum whiling performing selection (default: 0.9)')
+    parser.add_argument('--selection_weight_decay', '-swd', default=5e-4, type=float, metavar='W', help='weight decay whiling performing selection (default: 5e-4)', dest='selection_weight_decay')
     parser.add_argument('--selection_optimizer', "-so", default="SGD", help='optimizer to use whiling performing selection, e.g. SGD, Adam')
     parser.add_argument("--selection_nesterov", "-sn", default=True, type=str_to_bool, help="if set nesterov whiling performing selection")
     parser.add_argument('--selection_lr', '-slr', type=float, default=0.1, help='learning rate for selection')
