@@ -71,8 +71,7 @@ class Submodular(EarlyTrain):
                                         self.embedding_dim).repeat(1, self.args.num_classes, 1) *\
                                         bias_parameters_grads.view(batch_num, self.args.num_classes,
                                         1).repeat(1, 1, self.embedding_dim)
-                gradients.append(torch.cat([bias_parameters_grads, weight_parameters_grads.flatten(1)],
-                                            dim=1).cpu().numpy())
+                gradients.append(torch.cat([bias_parameters_grads, weight_parameters_grads.flatten(1)], dim=1).cpu().numpy())
 
         gradients = np.concatenate(gradients, axis=0)
         return gradients
@@ -98,8 +97,7 @@ class Submodular(EarlyTrain):
                     submod_optimizer = submodular_optimizer.__dict__[self._greedy](args=self.args,
                                         index=c_indx, budget=round(self.fraction * len(c_indx)), already_selected=[])
 
-                    c_selection_result = submod_optimizer.select(gain_function=submod_function.calc_gain,
-                                                                 update_state=submod_function.update_state)
+                    c_selection_result = submod_optimizer.select(gain_function=submod_function.calc_gain, update_state=submod_function.update_state)
                     selection_result = np.append(selection_result, c_selection_result)
             else:
                 # Calculate gradients into a matrix

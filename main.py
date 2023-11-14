@@ -45,8 +45,7 @@ def main():
     # Training
     parser.add_argument('--batch', '--batch-size', "-b", default=256, type=int, metavar='N', help='mini-batch size (default: 256)')
     parser.add_argument("--train_batch", "-tb", default=None, type=int, help="batch size for training, if not specified, it will equal to batch size in argument --batch")
-    parser.add_argument("--selection_batch", "-sb", default=None, type=int,
-                     help="batch size for selection, if not specified, it will equal to batch size in argument --batch")
+    parser.add_argument("--selection_batch", "-sb", default=None, type=int, help="batch size for selection, if not specified, it will equal to batch size in argument --batch")
 
     # Testing
     parser.add_argument("--test_interval", '-ti', default=1, type=int, help=
