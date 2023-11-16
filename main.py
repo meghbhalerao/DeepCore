@@ -10,7 +10,8 @@ from utils import *
 from datetime import datetime
 from time import sleep
 import wandb
-
+import logging
+from deepcore.train_methods.resnet9_trainer import ResNet9Trainer
 
 def main():
     parser = argparse.ArgumentParser(description='Parameter Processing')
@@ -50,8 +51,7 @@ def main():
     # Testing
     parser.add_argument("--test_interval", '-ti', default=1, type=int, help=
     "the number of training epochs to be preformed between two test epochs; a value of 0 means no test will be run (default: 1)")
-    parser.add_argument("--test_fraction", '-tf', type=float, default=1.,
-                        help="proportion of test dataset used for evaluating the model (default: 1.)")
+    parser.add_argument("--test_fraction", '-tf', type=float, default=1., help="proportion of test dataset used for evaluating the model (default: 1.)")
 
     # Selecting
     parser.add_argument("--selection_epochs", "-se", default=40, type=int, help="number of epochs whiling performing selection on full dataset")
@@ -145,8 +145,7 @@ def main():
                 [transforms.RandomCrop(args.im_size, padding=4, padding_mode="reflect"),
                  transforms.RandomHorizontalFlip(), dst_train.transform])
         elif args.dataset == "ImageNet":
-            dst_train.transform = transforms.Compose([transforms.RandomResizedCrop(224),
-                transforms.RandomHorizontalFlip(),
+            dst_train.transform = transforms.Compose([transforms.RandomResizedCrop(224), transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 transforms.Normalize(mean, std)])
 
@@ -192,79 +191,87 @@ def main():
 
             criterion = nn.CrossEntropyLoss(reduction='none').to(args.device)
 
-            # Optimizer
-            if args.optimizer == "SGD":
-                optimizer = torch.optim.SGD(network.parameters(), args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=args.nesterov)
-            elif args.optimizer == "Adam":
-                optimizer = torch.optim.Adam(network.parameters(), args.lr, weight_decay=args.weight_decay)
-            else:
-                optimizer = torch.optim.__dict__[args.optimizer](network.parameters(), args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=args.nesterov)
-
-            # LR scheduler
-            if args.scheduler == "CosineAnnealingLR":
-                scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, len(train_loader) * args.epochs, eta_min=args.min_lr)
-            elif args.scheduler == "StepLR":
-                scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=len(train_loader) * args.step_size, gamma=args.gamma)
-            else:
-                scheduler = torch.optim.lr_scheduler.__dict__[args.scheduler](optimizer)
-            scheduler.last_epoch = (start_epoch - 1) * len(train_loader)
-
-            if "opt_dict" in checkpoint.keys():
-                optimizer.load_state_dict(checkpoint["opt_dict"])
-
-            # Log recorder
-            if "rec" in checkpoint.keys():
-                rec = checkpoint["rec"]
-            else:
-                rec = init_recorder()
-
-            best_prec1 = checkpoint["best_acc1"] if "best_acc1" in checkpoint.keys() else 0.0
-
-            # Save the checkpont with only the susbet.
-            if args.save_path != "" and args.resume == "":
-                save_checkpoint({"exp": exp, "subset": subset, "sel_args": selection_args}, os.path.join(args.save_path, checkpoint_name + ("" if model == args.model else model + "_") + "unknown.ckpt"), 0, 0.)
-
-            for epoch in range(start_epoch, args.epochs):
-                # train for one epoch
-                prec_train, loss_train = train(train_loader, network, criterion, optimizer, scheduler, epoch, args, rec, if_weighted=if_weighted)
-
-                # evaluate on validation set
-                if args.test_interval > 0 and (epoch + 1) % args.test_interval == 0:
-                    prec_test, loss_test = test(test_loader, network, criterion, epoch, args, rec)
-
-                    # remember best prec@1 and save checkpoint
-                    is_best = prec_test > best_prec1
-
-                    if is_best:
-                        best_prec1 = prec_test
-                        if args.save_path != "":
-                            rec = record_ckpt(rec, epoch)
-                            save_checkpoint({"exp": exp, "epoch": epoch + 1, "state_dict": network.state_dict(), "opt_dict": optimizer.state_dict(), "best_acc1": best_prec1, "rec": rec, "subset": subset, "sel_args": selection_args}, os.path.join(args.save_path, checkpoint_name + ("" if model == args.model else model + "_") + "unknown.ckpt"), epoch=epoch, prec=best_prec1)
-                wandb.log({"acc_test": prec_test, "loss_test": loss_test, "acc_train": prec_train, "loss_train": loss_train, "best_test_acc": best_prec1})
-            # Prepare for the next checkpoint
-            if args.save_path != "":
-                try:
-                    os.rename(
-                        os.path.join(args.save_path, checkpoint_name + ("" if model == args.model else model + "_") +
-                                     "unknown.ckpt"), os.path.join(args.save_path, checkpoint_name +
-                                     ("" if model == args.model else model + "_") + "%f.ckpt" % best_prec1))
-                except:
-                    save_checkpoint({"exp": exp,
-                                     "epoch": args.epochs,
-                                     "state_dict": network.state_dict(),
-                                     "opt_dict": optimizer.state_dict(),
-                                     "best_acc1": best_prec1,
-                                     "rec": rec,
-                                     "subset": subset,
-                                     "sel_args": selection_args}, os.path.join(args.save_path, checkpoint_name + ("" if model == args.model else model + "_") + "%f.ckpt" % best_prec1), epoch=args.epochs - 1,
-                                    prec=best_prec1)
-
-            print('| Best accuracy: ', best_prec1, ", on model " + model if len(models) > 1 else "", end="\n\n")
-            start_epoch = 0
-            checkpoint = {}
-            sleep(2)
             
-        wandb.finish()
+            if model.lower() == 'resnet9':
+                logging.info(f"Model is {args.model} and hence, performing training using strategy which is specifically designed for Resnet9")
+                dataloaders = {"train": train_loader, "test": test_loader}
+                dataset_sizes = {"train": len(dst_subset), "test": len(dst_test)}
+                ResNet9Trainer(network, dataloaders, dataset_sizes, device='cuda' if torch.cuda.is_available() else 'cpu').run_train()
+            elif model.lower == 'resnet18':
+                logging.info(f"Model being used is {model}, and hence doing alternative training strategy! Using DeepCore Style Training Strategy!")
+                # Optimizer
+                if args.optimizer == "SGD":
+                    optimizer = torch.optim.SGD(network.parameters(), args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=args.nesterov)
+                elif args.optimizer == "Adam":
+                    optimizer = torch.optim.Adam(network.parameters(), args.lr, weight_decay=args.weight_decay)
+                else:
+                    optimizer = torch.optim.__dict__[args.optimizer](network.parameters(), args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=args.nesterov)
+
+                # LR scheduler
+                if args.scheduler == "CosineAnnealingLR":
+                    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, len(train_loader) * args.epochs, eta_min=args.min_lr)
+                elif args.scheduler == "StepLR":
+                    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=len(train_loader) * args.step_size, gamma=args.gamma)
+                else:
+                    scheduler = torch.optim.lr_scheduler.__dict__[args.scheduler](optimizer)
+                scheduler.last_epoch = (start_epoch - 1) * len(train_loader)
+
+                if "opt_dict" in checkpoint.keys():
+                    optimizer.load_state_dict(checkpoint["opt_dict"])
+
+                # Log recorder
+                if "rec" in checkpoint.keys():
+                    rec = checkpoint["rec"]
+                else:
+                    rec = init_recorder()
+
+                best_prec1 = checkpoint["best_acc1"] if "best_acc1" in checkpoint.keys() else 0.0
+
+                # Save the checkpont with only the susbet.
+                if args.save_path != "" and args.resume == "":
+                    save_checkpoint({"exp": exp, "subset": subset, "sel_args": selection_args}, os.path.join(args.save_path, checkpoint_name + ("" if model == args.model else model + "_") + "unknown.ckpt"), 0, 0.)
+
+                for epoch in range(start_epoch, args.epochs):
+                    # train for one epoch
+                    prec_train, loss_train = train(train_loader, network, criterion, optimizer, scheduler, epoch, args, rec, if_weighted=if_weighted)
+
+                    # evaluate on validation set
+                    if args.test_interval > 0 and (epoch + 1) % args.test_interval == 0:
+                        prec_test, loss_test = test(test_loader, network, criterion, epoch, args, rec)
+
+                        # remember best prec@1 and save checkpoint
+                        is_best = prec_test > best_prec1
+
+                        if is_best:
+                            best_prec1 = prec_test
+                            if args.save_path != "":
+                                rec = record_ckpt(rec, epoch)
+                                save_checkpoint({"exp": exp, "epoch": epoch + 1, "state_dict": network.state_dict(), "opt_dict": optimizer.state_dict(), "best_acc1": best_prec1, "rec": rec, "subset": subset, "sel_args": selection_args}, os.path.join(args.save_path, checkpoint_name + ("" if model == args.model else model + "_") + "unknown.ckpt"), epoch=epoch, prec=best_prec1)
+                    wandb.log({"acc_test": prec_test, "loss_test": loss_test, "acc_train": prec_train, "loss_train": loss_train, "best_test_acc": best_prec1})
+                # Prepare for the next checkpoint
+                if args.save_path != "":
+                    try:
+                        os.rename(
+                            os.path.join(args.save_path, checkpoint_name + ("" if model == args.model else model + "_") +
+                                        "unknown.ckpt"), os.path.join(args.save_path, checkpoint_name +
+                                        ("" if model == args.model else model + "_") + "%f.ckpt" % best_prec1))
+                    except:
+                        save_checkpoint({"exp": exp,
+                                        "epoch": args.epochs,
+                                        "state_dict": network.state_dict(),
+                                        "opt_dict": optimizer.state_dict(),
+                                        "best_acc1": best_prec1,
+                                        "rec": rec,
+                                        "subset": subset,
+                                        "sel_args": selection_args}, os.path.join(args.save_path, checkpoint_name + ("" if model == args.model else model + "_") + "%f.ckpt" % best_prec1), epoch=args.epochs - 1,
+                                        prec=best_prec1)
+
+                print('| Best accuracy: ', best_prec1, ", on model " + model if len(models) > 1 else "", end="\n\n")
+                start_epoch = 0
+                checkpoint = {}
+                sleep(2)
+                
+            wandb.finish()
     
 
 

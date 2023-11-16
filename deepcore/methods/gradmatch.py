@@ -9,8 +9,7 @@ from ..nets.nets_utils import MyDataParallel
 # https://github.com/krishnatejakk/GradMatch
 
 class GradMatch(EarlyTrain):
-    def __init__(self, dst_train, args, fraction=0.5, random_seed=None, epochs=200, specific_model=None,
-                 balance=True, dst_val=None, lam: float = 1., **kwargs):
+    def __init__(self, dst_train, args, fraction=0.5, random_seed=None, epochs=200, specific_model=None, balance=True, dst_val=None, lam: float = 1., **kwargs):
         super().__init__(dst_train, args, fraction, random_seed, epochs, specific_model, **kwargs)
         self.balance = balance
         self.dst_val = dst_val
@@ -146,8 +145,7 @@ class GradMatch(EarlyTrain):
             batch_num = targets.shape[0]
             with torch.no_grad():
                 bias_parameters_grads = torch.autograd.grad(loss, outputs, retain_graph=True)[0].cpu()
-                weight_parameters_grads = self.model.embedding_recorder.embedding.cpu().view(batch_num, 1,
-                                                    self.embedding_dim).repeat(1,self.args.num_classes,1) *\
+                weight_parameters_grads = self.model.embedding_recorder.embedding.cpu().view(batch_num, 1, self.embedding_dim).repeat(1,self.args.num_classes,1) *\
                                                     bias_parameters_grads.view(batch_num, self.args.num_classes,
                                                     1).repeat(1, 1, self.embedding_dim)
                 gradients[i * self.args.selection_batch:min((i + 1) * self.args.selection_batch, sample_num)] =\
