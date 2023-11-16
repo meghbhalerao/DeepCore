@@ -12,6 +12,18 @@ from time import sleep
 import wandb
 import logging
 from deepcore.train_methods.resnet9_trainer import ResNet9Trainer
+import sys
+logging.basicConfig(
+    level=logging.DEBUG,  # Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',  # Define the log format
+    datefmt='%Y-%m-%d %H:%M:%S',  # Define the date format
+    handlers=[
+        logging.StreamHandler(sys.stdout)  # Output logs to the standard output
+    ]
+)
+
+# Create a logger
+logger = logging.getLogger(__name__)
 
 def main():
     parser = argparse.ArgumentParser(description='Parameter Processing')
@@ -20,6 +32,7 @@ def main():
     parser.add_argument('--dataset', type=str, default='CIFAR10', help='dataset')
     parser.add_argument('--model', type=str, default='ResNet18', help='model')
     parser.add_argument('--selection', type=str, default="uniform", help="selection method")
+
     parser.add_argument('--num_exp', type=int, default=5, help='the number of experiments')
     parser.add_argument('--num_eval', type=int, default=10, help='the number of evaluating randomly initialized models')
     parser.add_argument('--epochs', default=200, type=int, help='number of total epochs to run')
@@ -47,6 +60,7 @@ def main():
     parser.add_argument('--batch', '--batch-size', "-b", default=256, type=int, metavar='N', help='mini-batch size (default: 256)')
     parser.add_argument("--train_batch", "-tb", default=None, type=int, help="batch size for training, if not specified, it will equal to batch size in argument --batch")
     parser.add_argument("--selection_batch", "-sb", default=None, type=int, help="batch size for selection, if not specified, it will equal to batch size in argument --batch")
+    parser.add_argument('--train_mode', type=str, default="deepcore", help="train mode to use")
 
     # Testing
     parser.add_argument("--test_interval", '-ti', default=1, type=int, help=
@@ -193,12 +207,13 @@ def main():
 
             
             if model.lower() == 'resnet9':
-                logging.info(f"Model is {args.model} and hence, performing training using strategy which is specifically designed for Resnet9")
+                assert args.train_mode == 'smr-r9'
+                logger.info(f"Model is {args.model} and hence, performing training using strategy which is specifically designed for Resnet9")
                 dataloaders = {"train": train_loader, "test": test_loader}
                 dataset_sizes = {"train": len(dst_subset), "test": len(dst_test)}
                 ResNet9Trainer(network, dataloaders, dataset_sizes, device='cuda' if torch.cuda.is_available() else 'cpu').run_train()
             elif model.lower == 'resnet18':
-                logging.info(f"Model being used is {model}, and hence doing alternative training strategy! Using DeepCore Style Training Strategy!")
+                logger.info(f"Model being used is {model}, and hence doing alternative training strategy! Using DeepCore Style Training Strategy!")
                 # Optimizer
                 if args.optimizer == "SGD":
                     optimizer = torch.optim.SGD(network.parameters(), args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=args.nesterov)

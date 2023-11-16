@@ -69,8 +69,7 @@ class kCenterGreedy(EarlyTrain):
     def __init__(self, dst_train, args, fraction=0.5, random_seed=None, epochs=0,
                  specific_model="ResNet18", balance: bool = False, already_selected=[], metric="euclidean",
                  torchvision_pretrain: bool = True, **kwargs):
-        super().__init__(dst_train, args, fraction, random_seed, epochs=epochs, specific_model=specific_model,
-                         torchvision_pretrain=torchvision_pretrain, **kwargs)
+        super().__init__(dst_train, args, fraction, random_seed, epochs=epochs, specific_model=specific_model, torchvision_pretrain=torchvision_pretrain, **kwargs)
 
         if already_selected.__len__() != 0:
             if min(already_selected) < 0 or max(already_selected) >= self.n_train:
